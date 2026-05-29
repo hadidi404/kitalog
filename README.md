@@ -4,20 +4,19 @@ A repair shop management system for electronics and gadget repair businesses. Tr
 
 ## Features
 
-- **Job Tracking** — Create and manage repair jobs with status updates (Pending, In Progress, Done)
+- **Job Tracking** — Create and manage repair jobs with real-time status updates
 - **Customer Management** — Auto-aggregated customer records from job history
 - **Analytics** — Revenue, expenses, and net income breakdowns with date-range filtering
 - **Dashboard** — Monthly summary with recent job activity
-- **Firebase Firestore** — Cloud-based storage, accessible from any device
+- **Cloud Storage** — Data persists across devices and sessions
 
 ## Tech Stack
 
-- [Vue 3](https://vuejs.org/) — Composition API with `<script setup>`
+- [Vue 3](https://vuejs.org/) — Composition API
 - [Vite](https://vitejs.dev/) — Build tool
-- [Tailwind CSS](https://tailwindcss.com/) — Utility-first styling
+- [Tailwind CSS](https://tailwindcss.com/) — Styling
 - [Pinia](https://pinia.vuejs.org/) — State management
-- [Firebase Firestore](https://firebase.google.com/docs/firestore) — Database
-- [Chart.js](https://www.chartjs.org/) + [vue-chartjs](https://vue-chartjs.org/) — Analytics charts
+- [Chart.js](https://www.chartjs.org/) + [vue-chartjs](https://vue-chartjs.org/) — Charts
 - [Lucide](https://lucide.dev/) — Icons
 
 ## Getting Started
@@ -28,15 +27,13 @@ A repair shop management system for electronics and gadget repair businesses. Tr
 npm install
 ```
 
-### 2. Configure Firebase
-
-Copy the example env file and fill in your Firebase project credentials:
+### 2. Configure environment variables
 
 ```bash
 cp .env.example .env
 ```
 
-Then edit `.env` with your values from the [Firebase Console](https://console.firebase.google.com) → Project Settings → Your apps.
+Fill in the required values in `.env`.
 
 ### 3. Run the development server
 
@@ -49,11 +46,3 @@ npm run dev
 ```bash
 npm run build
 ```
-
-## Firebase Setup
-
-1. Create a project at [console.firebase.google.com](https://console.firebase.google.com)
-2. Enable **Firestore Database** in test mode
-3. Register a web app and copy the config into `.env`
-
-> **Note:** After 30 days, update your Firestore Security Rules to restrict public access.

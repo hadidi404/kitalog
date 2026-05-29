@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import {
   ArrowLeft, Calendar, User, Phone, Cpu, Tag,
   FileText, CircleDot, Banknote, Package, Plus, X, Save
@@ -9,13 +9,15 @@ import { useShopStore } from '../stores/shop'
 import { showToast } from '../utils/toast'
 
 const router = useRouter()
+const route  = useRoute()
 const store  = useShopStore()
+const jobId  = route.params.id
 
 const DEVICE_TYPES   = ['Phone', 'Laptop', 'Tablet', 'Desktop PC', 'Game Console', 'Smart TV', 'Other']
 const STATUS_OPTIONS = ['Pending', 'In Progress', 'Done']
 
 const form = ref({
-  date:     new Date().toISOString().split('T')[0],
+  date:     '',
   customer: '',
   contact:  '',
   device:   'Phone',
@@ -23,43 +25,42 @@ const form = ref({
   problem:  '',
   status:   'Pending',
   labor:    '',
-  parts:    []
+  parts:    [],
 })
 
 const errors     = ref({})
 const submitting = ref(false)
+const loaded     = ref(false)
 
-const showCustomerSuggestions = ref(false)
-const showModelSuggestions    = ref(false)
-const showProblemSuggestions  = ref(false)
+watch(
+  () => store.jobs,
+  (jobs) => {
+    if (loaded.value) return
+    const job = jobs.find(j => j.id === jobId)
+    if (!job) {
+      if (!store.loading) {
+        showToast('Job not found.', 'error')
+        router.push('/jobs')
+      }
+      return
+    }
+    form.value = {
+      date:     store.jobDate(job),
+      customer: job.customer,
+      contact:  job.contact || '',
+      device:   job.device,
+      model:    job.model,
+      problem:  job.problem,
+      status:   job.status,
+      labor:    job.labor != null ? String(job.labor) : '',
+      parts:    (job.parts || []).map(p => ({ name: p.name, cost: String(p.cost) })),
+    }
+    loaded.value = true
+  },
+  { immediate: true },
+)
 
-const customerSuggestions = computed(() => {
-  const q = form.value.customer.trim().toLowerCase()
-  if (!q) return []
-  return [...new Set(store.jobs.map(j => j.customer.trim()))]
-    .filter(n => n.toLowerCase().includes(q))
-    .slice(0, 6)
-})
-
-const modelSuggestions = computed(() => {
-  const q = form.value.model.trim().toLowerCase()
-  if (!q) return []
-  return [...new Set(store.jobs.map(j => j.model?.trim()).filter(Boolean))]
-    .filter(m => m.toLowerCase().includes(q))
-    .slice(0, 6)
-})
-
-function selectCustomer(name) {
-  form.value.customer = name
-  const job = store.jobs.find(j => j.customer.trim().toLowerCase() === name.toLowerCase())
-  if (job?.contact) form.value.contact = job.contact
-  showCustomerSuggestions.value = false
-}
-
-function selectModel(model) {
-  form.value.model = model
-  showModelSuggestions.value = false
-}
+const showProblemSuggestions = ref(false)
 
 const problemSuggestions = computed(() => {
   const q = form.value.problem.trim().toLowerCase()
@@ -114,7 +115,7 @@ async function submit() {
   if (!validate() || submitting.value) return
   submitting.value = true
   try {
-    await store.addJob({
+    await store.updateJob(jobId, {
       date:       form.value.date,
       customer:   form.value.customer.trim(),
       contact:    form.value.contact.trim(),
@@ -127,10 +128,10 @@ async function submit() {
       partsTotal: partsTotal.value,
       total:      totalCharge.value,
     })
-    showToast('Job saved successfully!')
+    showToast('Job updated successfully!')
     router.push('/jobs')
   } catch {
-    showToast('Failed to save. Check your connection.', 'error')
+    showToast('Failed to update. Check your connection.', 'error')
     submitting.value = false
   }
 }
@@ -141,8 +142,8 @@ async function submit() {
 
     <div class="flex items-center justify-between mb-5">
       <div>
-        <h2 class="text-lg font-bold text-slate-900">New Repair Job</h2>
-        <p class="text-sm text-slate-500 mt-0.5">Fill in the details to record a repair.</p>
+        <h2 class="text-lg font-bold text-slate-900">Edit Repair Job</h2>
+        <p class="text-sm text-slate-500 mt-0.5">Update the details for this repair.</p>
       </div>
       <router-link
         to="/jobs"
@@ -158,8 +159,8 @@ async function submit() {
 
         <div class="flex-1 flex flex-col gap-4">
 
-          <section class="bg-white rounded-xl border border-slate-200 shadow-sm">
-            <div class="px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center gap-2 rounded-t-xl">
+          <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
               <User :size="13" class="text-slate-400" />
               <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Job & Customer</h3>
             </div>
@@ -194,23 +195,11 @@ async function submit() {
                 <label class="flex items-center gap-1 text-xs font-semibold text-slate-600 mb-1">
                   <User :size="11" class="text-slate-400" /> Customer Name <span class="text-red-400">*</span>
                 </label>
-                <div class="relative">
-                  <input
-                    v-model="form.customer" type="text" placeholder="Juan dela Cruz" autocomplete="off"
-                    @focus="showCustomerSuggestions = true"
-                    @blur="showCustomerSuggestions = false"
-                    class="w-full border rounded-lg px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                    :class="errors.customer ? 'border-red-400 bg-red-50' : 'border-slate-200'"
-                  />
-                  <ul v-if="showCustomerSuggestions && customerSuggestions.length"
-                      class="absolute z-50 w-full bg-white border border-slate-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
-                    <li
-                      v-for="name in customerSuggestions" :key="name"
-                      @mousedown.prevent="selectCustomer(name)"
-                      class="px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 hover:text-blue-700 transition-colors"
-                    >{{ name }}</li>
-                  </ul>
-                </div>
+                <input
+                  v-model="form.customer" type="text" placeholder="Juan dela Cruz"
+                  class="w-full border rounded-lg px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                  :class="errors.customer ? 'border-red-400 bg-red-50' : 'border-slate-200'"
+                />
                 <p v-if="errors.customer" class="text-xs text-red-500 mt-0.5">{{ errors.customer }}</p>
               </div>
 
@@ -226,8 +215,8 @@ async function submit() {
             </div>
           </section>
 
-          <section class="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm">
-            <div class="px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center gap-2 rounded-t-xl">
+          <section class="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
               <Cpu :size="13" class="text-slate-400" />
               <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Device Info</h3>
             </div>
@@ -248,23 +237,11 @@ async function submit() {
                   <label class="flex items-center gap-1 text-xs font-semibold text-slate-600 mb-1">
                     <Tag :size="11" class="text-slate-400" /> Brand / Model <span class="text-red-400">*</span>
                   </label>
-                  <div class="relative">
-                    <input
-                      v-model="form.model" type="text" placeholder="Samsung A54" autocomplete="off"
-                      @focus="showModelSuggestions = true"
-                      @blur="showModelSuggestions = false"
-                      class="w-full border rounded-lg px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                      :class="errors.model ? 'border-red-400 bg-red-50' : 'border-slate-200'"
-                    />
-                    <ul v-if="showModelSuggestions && modelSuggestions.length"
-                        class="absolute z-50 w-full bg-white border border-slate-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
-                      <li
-                        v-for="model in modelSuggestions" :key="model"
-                        @mousedown.prevent="selectModel(model)"
-                        class="px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 hover:text-blue-700 transition-colors"
-                      >{{ model }}</li>
-                    </ul>
-                  </div>
+                  <input
+                    v-model="form.model" type="text" placeholder="Samsung A54"
+                    class="w-full border rounded-lg px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    :class="errors.model ? 'border-red-400 bg-red-50' : 'border-slate-200'"
+                  />
                   <p v-if="errors.model" class="text-xs text-red-500 mt-0.5">{{ errors.model }}</p>
                 </div>
               </div>
@@ -395,12 +372,20 @@ async function submit() {
         </div>
       </div>
 
-      <button
-        type="submit" :disabled="submitting"
-        class="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold py-3 rounded-xl transition-colors text-sm shadow-sm"
-      >
-        <Save :size="15" /> Save Job
-      </button>
+      <div class="flex gap-3">
+        <router-link
+          to="/jobs"
+          class="flex-1 inline-flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition-colors text-sm"
+        >
+          Cancel
+        </router-link>
+        <button
+          type="submit" :disabled="submitting"
+          class="flex-1 inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold py-3 rounded-xl transition-colors text-sm shadow-sm"
+        >
+          <Save :size="15" /> Save Changes
+        </button>
+      </div>
 
     </form>
   </div>

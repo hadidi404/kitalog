@@ -104,6 +104,7 @@ function confirmDelete(id) {
             </div>
             <div class="flex items-center gap-3">
               <span class="text-sm font-bold text-slate-800 tabular-nums">{{ formatPeso(job.total) }}</span>
+              <router-link :to="`/jobs/${job.id}/edit`" class="text-xs font-semibold text-blue-500 hover:text-blue-700">Edit</router-link>
               <button @click="confirmDelete(job.id)" class="text-xs font-semibold text-red-400 hover:text-red-600">Delete</button>
             </div>
           </div>
@@ -153,7 +154,10 @@ function confirmDelete(id) {
               <td class="px-5 py-3.5 text-right text-slate-600 tabular-nums whitespace-nowrap">{{ formatPeso(job.partsTotal) }}</td>
               <td class="px-5 py-3.5 text-right font-bold text-slate-800 tabular-nums whitespace-nowrap">{{ formatPeso(job.total) }}</td>
               <td class="px-5 py-3.5 text-right">
-                <button @click="confirmDelete(job.id)" class="text-xs font-semibold text-red-400 hover:text-red-600 transition-colors">Delete</button>
+                <div class="flex items-center justify-end gap-3">
+                  <router-link :to="`/jobs/${job.id}/edit`" class="text-xs font-semibold text-blue-500 hover:text-blue-700 transition-colors">Edit</router-link>
+                  <button @click="confirmDelete(job.id)" class="text-xs font-semibold text-red-400 hover:text-red-600 transition-colors">Delete</button>
+                </div>
               </td>
             </tr>
           </tbody>

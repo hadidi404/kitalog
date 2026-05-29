@@ -10,7 +10,7 @@ export const useShopStore = defineStore('shop', () => {
   const jobs    = ref([])
   const loading = ref(true)
 
-  const q = query(collection(db, 'jobs'), orderBy('createdAt', 'desc'))
+  const q = query(collection(db, 'jobs'), orderBy('date', 'desc'))
   onSnapshot(
     q,
     snapshot => {

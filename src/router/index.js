@@ -15,6 +15,6 @@ export default createRouter({
     { path: '/jobs/:id/edit', component: EditJob, meta: { title: 'Edit Job' } },
     { path: '/jobs', component: Jobs, meta: { title: 'All Jobs' } },
     { path: '/customers', component: Customers, meta: { title: 'Customers' } },
-    { path: '/analytics', component: Analytics, meta: { title: 'Analytics' } }
+    { path: '/analytics', component: Analytics, meta: { title: 'Analytics' } },
   ]
 })

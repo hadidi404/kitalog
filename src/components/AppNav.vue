@@ -2,10 +2,12 @@
 import { useRoute } from 'vue-router'
 import {
   Zap, LayoutDashboard, PlusCircle, ClipboardList,
-  Users, BarChart3, MapPin
+  Users, BarChart3, MapPin, LogOut
 } from 'lucide-vue-next'
+import { useAuthStore } from '../stores/auth'
 
-const route = useRoute()
+const route    = useRoute()
+const authStore = useAuthStore()
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -42,10 +44,16 @@ const navItems = [
       </router-link>
     </nav>
 
-    <div class="px-6 py-4 border-t border-slate-100 shrink-0">
-      <span class="flex items-center gap-2 text-xs text-slate-400">
+    <div class="px-4 py-4 border-t border-slate-100 shrink-0 space-y-2">
+      <span class="flex items-center gap-2 text-xs text-slate-400 px-2">
         <MapPin :size="13" /> Infanta, Quezon
       </span>
+      <button
+        @click="authStore.logout"
+        class="w-full flex items-center gap-3 px-2 py-2 rounded-xl text-sm font-medium text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+      >
+        <LogOut :size="16" class="shrink-0" /> Sign out
+      </button>
     </div>
   </aside>
 

@@ -102,12 +102,12 @@ const deviceIcon = d => DEVICE_ICONS[d] ?? Wrench
       </router-link>
     </div>
 
-    <div class="grid grid-cols-2 xl:grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 xl:grid-cols-4 gap-2 lg:gap-4">
 
       <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white shadow-sm">
         <div class="flex items-center justify-between mb-4">
           <p class="text-[11px] font-bold uppercase tracking-widest opacity-75">Total Jobs</p>
-          <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+          <div class="w-8 h-8 bg-white/20 squircle flex items-center justify-center">
             <ClipboardList :size="15" />
           </div>
         </div>
@@ -118,7 +118,7 @@ const deviceIcon = d => DEVICE_ICONS[d] ?? Wrench
       <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-5 text-white shadow-sm">
         <div class="flex items-center justify-between mb-4">
           <p class="text-[11px] font-bold uppercase tracking-widest opacity-75">Revenue</p>
-          <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+          <div class="w-8 h-8 bg-white/20 squircle flex items-center justify-center">
             <TrendingUp :size="15" />
           </div>
         </div>
@@ -129,7 +129,7 @@ const deviceIcon = d => DEVICE_ICONS[d] ?? Wrench
       <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-5 text-white shadow-sm">
         <div class="flex items-center justify-between mb-4">
           <p class="text-[11px] font-bold uppercase tracking-widest opacity-75">Expenses</p>
-          <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+          <div class="w-8 h-8 bg-white/20 squircle flex items-center justify-center">
             <Package :size="15" />
           </div>
         </div>
@@ -140,7 +140,7 @@ const deviceIcon = d => DEVICE_ICONS[d] ?? Wrench
       <div class="bg-gradient-to-br from-violet-500 to-violet-600 rounded-xl p-5 text-white shadow-sm">
         <div class="flex items-center justify-between mb-4">
           <p class="text-[11px] font-bold uppercase tracking-widest opacity-75">Net Income</p>
-          <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+          <div class="w-8 h-8 bg-white/20 squircle flex items-center justify-center">
             <Wallet :size="15" />
           </div>
         </div>
@@ -150,32 +150,32 @@ const deviceIcon = d => DEVICE_ICONS[d] ?? Wrench
 
     </div>
 
-    <div class="grid grid-cols-3 gap-4">
-      <div class="bg-amber-50 border border-amber-100 rounded-xl p-4 flex items-center gap-3">
-        <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center shrink-0">
+    <div class="grid grid-cols-3 gap-2 lg:gap-4">
+      <div class="bg-amber-50 border border-amber-100 rounded-xl p-3 lg:p-4 flex items-center gap-2 lg:gap-3">
+        <div class="hidden lg:flex w-10 h-10 bg-amber-100 squircle items-center justify-center shrink-0">
           <Clock :size="18" class="text-amber-600" />
         </div>
-        <div>
-          <p class="text-xs font-bold text-amber-600 uppercase tracking-wide">Pending</p>
-          <p class="text-2xl font-extrabold text-slate-900 leading-tight">{{ statusCounts.pending }}</p>
+        <div class="flex-1">
+          <p class="text-[10px] lg:text-xs font-bold text-amber-600 uppercase tracking-wide text-center lg:text-left">Pending</p>
+          <p class="text-xl lg:text-2xl font-extrabold text-slate-900 leading-tight text-center lg:text-left">{{ statusCounts.pending }}</p>
         </div>
       </div>
-      <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-center gap-3">
-        <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
+      <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 lg:p-4 flex items-center gap-2 lg:gap-3">
+        <div class="hidden lg:flex w-10 h-10 bg-blue-100 squircle items-center justify-center shrink-0">
           <Wrench :size="18" class="text-blue-600" />
         </div>
-        <div>
-          <p class="text-xs font-bold text-blue-600 uppercase tracking-wide">In Progress</p>
-          <p class="text-2xl font-extrabold text-slate-900 leading-tight">{{ statusCounts.inProgress }}</p>
+        <div class="flex-1">
+          <p class="text-[10px] lg:text-xs font-bold text-blue-600 uppercase tracking-wide text-center lg:text-left">In Progress</p>
+          <p class="text-xl lg:text-2xl font-extrabold text-slate-900 leading-tight text-center lg:text-left">{{ statusCounts.inProgress }}</p>
         </div>
       </div>
-      <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-4 flex items-center gap-3">
-        <div class="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0">
+      <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-3 lg:p-4 flex items-center gap-2 lg:gap-3">
+        <div class="hidden lg:flex w-10 h-10 bg-emerald-100 squircle items-center justify-center shrink-0">
           <CheckCircle2 :size="18" class="text-emerald-600" />
         </div>
-        <div>
-          <p class="text-xs font-bold text-emerald-600 uppercase tracking-wide">Done</p>
-          <p class="text-2xl font-extrabold text-slate-900 leading-tight">{{ statusCounts.done }}</p>
+        <div class="flex-1">
+          <p class="text-[10px] lg:text-xs font-bold text-emerald-600 uppercase tracking-wide text-center lg:text-left">Done</p>
+          <p class="text-xl lg:text-2xl font-extrabold text-slate-900 leading-tight text-center lg:text-left">{{ statusCounts.done }}</p>
         </div>
       </div>
     </div>
@@ -203,7 +203,7 @@ const deviceIcon = d => DEVICE_ICONS[d] ?? Wrench
             v-for="job in recentJobs" :key="job.id"
             class="flex items-center gap-3 px-5 py-3 hover:bg-slate-50/60 transition-colors"
           >
-            <div class="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center shrink-0">
+            <div class="w-8 h-8 bg-slate-100 squircle flex items-center justify-center shrink-0">
               <component :is="deviceIcon(job.device)" :size="14" class="text-slate-500" />
             </div>
             <div class="flex-1 min-w-0">

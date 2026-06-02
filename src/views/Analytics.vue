@@ -7,7 +7,7 @@ import {
   ArcElement, Tooltip, Legend
 } from 'chart.js'
 import {
-  BarChart3, ClipboardList, TrendingUp, Wallet,
+  BarChart3, ClipboardList, TrendingUp, Wallet, Package,
   Users, Inbox
 } from 'lucide-vue-next'
 import { useShopStore } from '../stores/shop'
@@ -237,9 +237,24 @@ const doughnutOptions = {
       <div>
         <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">{{ rangeLabel }}</p>
         <div class="grid grid-cols-2 xl:grid-cols-4 gap-4">
-          <MetricCard label="Jobs"           :value="String(summary.count)"         :icon="ClipboardList" />
-          <MetricCard label="Revenue"        :value="formatPeso(summary.revenue)"   :icon="TrendingUp" />
-          <MetricCard label="Parts Expenses" :value="formatPeso(summary.expenses)"  :icon="ClipboardList" />
+          <MetricCard
+            label="Jobs"
+            :value="String(summary.count)"
+            :sub="summary.count === 0 ? 'No jobs in range' : summary.count + ' repair job' + (summary.count !== 1 ? 's' : '')"
+            :icon="ClipboardList"
+          />
+          <MetricCard
+            label="Revenue"
+            :value="formatPeso(summary.revenue)"
+            sub="Total collected"
+            :icon="TrendingUp"
+          />
+          <MetricCard
+            label="Parts Expenses"
+            :value="formatPeso(summary.expenses)"
+            sub="Parts & materials"
+            :icon="Package"
+          />
           <MetricCard
             label="Net Income"
             :value="formatPeso(summary.net)"

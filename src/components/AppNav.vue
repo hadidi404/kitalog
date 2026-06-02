@@ -46,7 +46,7 @@ const navItems = [
 
     <div class="px-4 py-4 border-t border-slate-100 shrink-0 space-y-2">
       <span class="flex items-center gap-2 text-xs text-slate-400 px-2">
-        <MapPin :size="13" /> Infanta, Quezon
+        <MapPin :size="13" /> Infanta, Pangasinan
       </span>
       <button
         @click="authStore.logout"

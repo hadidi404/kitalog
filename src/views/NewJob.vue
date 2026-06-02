@@ -168,13 +168,19 @@ async function submit() {
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="flex items-center gap-1 text-xs font-semibold text-slate-600 mb-1">
-                    <Calendar :size="11" class="text-slate-400" /> Date <span class="text-red-400">*</span>
+                    <Calendar :size="11" class="text-slate-400" /> Date <span v-if="!form.date" class="text-red-400">*</span>
                   </label>
-                  <input
-                    v-model="form.date" type="date"
-                    class="w-full border rounded-lg px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                    :class="errors.date ? 'border-red-400 bg-red-50' : 'border-slate-200'"
-                  />
+                  <div class="relative">
+                    <input
+                      v-model="form.date" type="date"
+                      class="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                    />
+                    <input
+                      :value="form.date" type="text" readonly
+                      class="w-full border rounded-lg px-2.5 py-2 text-sm text-left pointer-events-none focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                      :class="errors.date ? 'border-red-400 bg-red-50' : 'border-slate-200'"
+                    />
+                  </div>
                   <p v-if="errors.date" class="text-xs text-red-500 mt-0.5">{{ errors.date }}</p>
                 </div>
                 <div>
@@ -192,7 +198,7 @@ async function submit() {
 
               <div>
                 <label class="flex items-center gap-1 text-xs font-semibold text-slate-600 mb-1">
-                  <User :size="11" class="text-slate-400" /> Customer Name <span class="text-red-400">*</span>
+                  <User :size="11" class="text-slate-400" /> Customer Name <span v-if="!form.customer.trim()" class="text-red-400">*</span>
                 </label>
                 <div class="relative">
                   <input
@@ -235,7 +241,7 @@ async function submit() {
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="flex items-center gap-1 text-xs font-semibold text-slate-600 mb-1">
-                    <Cpu :size="11" class="text-slate-400" /> Device Type <span class="text-red-400">*</span>
+                    <Cpu :size="11" class="text-slate-400" /> Device Type
                   </label>
                   <select
                     v-model="form.device"
@@ -246,7 +252,7 @@ async function submit() {
                 </div>
                 <div>
                   <label class="flex items-center gap-1 text-xs font-semibold text-slate-600 mb-1">
-                    <Tag :size="11" class="text-slate-400" /> Brand / Model <span class="text-red-400">*</span>
+                    <Tag :size="11" class="text-slate-400" /> Brand / Model <span v-if="!form.model.trim()" class="text-red-400">*</span>
                   </label>
                   <div class="relative">
                     <input
@@ -311,7 +317,7 @@ async function submit() {
 
               <div>
                 <label class="flex items-center gap-1 text-xs font-semibold text-slate-600 mb-1">
-                  <Banknote :size="11" class="text-slate-400" /> Labor Fee <span class="text-red-400">*</span>
+                  <Banknote :size="11" class="text-slate-400" /> Labor Fee <span v-if="form.labor === ''" class="text-red-400">*</span>
                 </label>
                 <div class="relative">
                   <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium select-none">₱</span>

@@ -40,7 +40,7 @@ function confirmDelete(id) {
 <template>
   <div class="space-y-5">
 
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div class="flex items-center justify-between">
       <div>
         <h2 class="text-lg font-bold text-slate-900">All Jobs</h2>
         <p class="text-sm text-slate-500 mt-0.5">
@@ -97,12 +97,9 @@ function confirmDelete(id) {
             </div>
           </div>
           <p class="text-xs text-slate-500 line-clamp-2 mb-3">{{ job.problem }}</p>
-          <div class="flex items-center justify-between">
-            <div class="text-xs text-slate-400 space-y-0.5">
-              <p>{{ store.jobDate(job) }}</p>
-              <p>Labor {{ formatPeso(job.labor) }} · Parts {{ formatPeso(job.partsTotal) }}</p>
-            </div>
-            <div class="flex items-center gap-3">
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-xs text-slate-500 flex-1 min-w-0">{{ store.jobDate(job) }}</p>
+            <div class="flex items-center gap-3 shrink-0">
               <span class="text-sm font-bold text-slate-800 tabular-nums">{{ formatPeso(job.total) }}</span>
               <router-link :to="`/jobs/${job.id}/edit`" class="text-xs font-semibold text-blue-500 hover:text-blue-700">Edit</router-link>
               <button @click="confirmDelete(job.id)" class="text-xs font-semibold text-red-400 hover:text-red-600">Delete</button>

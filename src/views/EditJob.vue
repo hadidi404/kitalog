@@ -28,9 +28,10 @@ const form = ref({
   parts:    [],
 })
 
-const errors     = ref({})
-const submitting = ref(false)
-const loaded     = ref(false)
+const errors       = ref({})
+const submitting   = ref(false)
+const loaded       = ref(false)
+const dateInputRef = ref(null)
 
 watch(
   () => store.jobs,
@@ -171,8 +172,9 @@ async function submit() {
                   <label class="flex just items-center gap-1 text-sm font-semibold text-slate-600 mb-1">
                     <Calendar :size="11" class="text-slate-400" /> Date <span v-if="!form.date" class="text-red-400">*</span>
                   </label>
-                  <div class="relative">
+                  <div class="relative cursor-pointer" @click="dateInputRef?.showPicker()">
                     <input
+                      ref="dateInputRef"
                       v-model="form.date" type="date"
                       class="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
                     />

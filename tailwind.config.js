@@ -2,6 +2,9 @@
 export default {
   content: ['./index.html', './src/**/*.{vue,js}'],
   theme: {
+    fontFamily: {
+      sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+    },
     extend: {
       borderRadius: {
         'sm':  '6px',

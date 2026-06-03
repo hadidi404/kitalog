@@ -1,20 +1,41 @@
 <script setup>
-import { ref, computed } from 'vue'
-import { Plus, Wrench, ChevronDown } from 'lucide-vue-next'
+import { ref, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { Plus, Wrench, ChevronDown, X } from 'lucide-vue-next'
 import { useShopStore } from '../stores/shop'
 import EmptyState from '../components/EmptyState.vue'
 
-const store = useShopStore()
+const store  = useShopStore()
+const route  = useRoute()
+const router = useRouter()
 
-const STATUS_FILTERS  = ['All', 'Pending', 'In Progress', 'Done']
-const STATUS_OPTIONS  = ['Pending', 'In Progress', 'Done']
-const filterStatus    = ref('All')
+const STATUS_FILTERS = ['All', 'Pending', 'In Progress', 'Done']
+const STATUS_OPTIONS = ['Pending', 'In Progress', 'Done']
+const filterStatus   = ref('All')
 
-const filteredJobs = computed(() =>
-  filterStatus.value === 'All'
+const searchQuery = computed(() => route.query.q || '')
+
+watch(searchQuery, q => { if (!q) filterStatus.value = 'All' })
+
+function clearSearch() {
+  router.replace({ path: '/jobs' })
+}
+
+const filteredJobs = computed(() => {
+  let jobs = filterStatus.value === 'All'
     ? store.jobs
     : store.jobs.filter(j => j.status === filterStatus.value)
-)
+  const q = searchQuery.value.toLowerCase()
+  if (q) {
+    jobs = jobs.filter(j =>
+      j.customer?.toLowerCase().includes(q) ||
+      j.model?.toLowerCase().includes(q) ||
+      j.device?.toLowerCase().includes(q) ||
+      j.problem?.toLowerCase().includes(q)
+    )
+  }
+  return jobs
+})
 
 const statusCount = s => store.jobs.filter(j => j.status === s).length
 
@@ -53,6 +74,11 @@ function confirmDelete(id) {
       >
         <Plus :size="15" /> New Job
       </router-link>
+    </div>
+
+    <div v-if="searchQuery" class="flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold px-3 py-2 rounded-lg">
+      <span class="flex-1">Showing results for "{{ searchQuery }}"</span>
+      <button @click="clearSearch" class="hover:text-blue-900 transition-colors"><X :size="13" /></button>
     </div>
 
     <div class="flex gap-2 flex-wrap">

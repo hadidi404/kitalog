@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   LayoutDashboard, Briefcase,
-  Users, Package, Receipt, BarChart3, FileText, Settings, LogOut
+  Users, BarChart3, LogOut
 } from 'lucide-vue-next'
 import { useAuthStore } from '../stores/auth'
 import { useShopStore } from '../stores/shop'
@@ -13,14 +13,10 @@ const authStore = useAuthStore()
 const store     = useShopStore()
 
 const navItems = [
-  { path: '/dashboard', label: 'Dashboard',       icon: LayoutDashboard },
-  { path: '/jobs',      label: 'Jobs',             icon: Briefcase       },
-  { path: '/customers', label: 'Customers',        icon: Users           },
-  { path: '/parts',     label: 'Parts & Inventory',icon: Package         },
-  { path: '/expenses',  label: 'Expenses',         icon: Receipt         },
-  { path: '/analytics', label: 'Analytics',        icon: BarChart3       },
-  { path: '/reports',   label: 'Reports',          icon: FileText        },
-  { path: '/settings',  label: 'Settings',         icon: Settings        },
+  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/jobs',      label: 'Jobs',      icon: Briefcase       },
+  { path: '/customers', label: 'Customers', icon: Users           },
+  { path: '/analytics', label: 'Analytics', icon: BarChart3       },
 ]
 
 const isActive = path => {
@@ -60,7 +56,6 @@ function fmt(n) {
 <template>
   <aside class="hidden md:flex flex-col w-64 fixed inset-y-0 left-0 z-30 border-r border-slate-100 bg-white shadow-sm">
 
-    <!-- Logo -->
     <div class="px-5 py-5 shrink-0">
       <div class="flex items-center gap-2.5">
         <div class="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center shrink-0">
@@ -70,7 +65,6 @@ function fmt(n) {
       </div>
     </div>
 
-    <!-- Profile -->
     <div class="px-4 pb-4 shrink-0">
       <div class="flex items-center gap-3 bg-slate-50 rounded-xl px-3 py-3">
         <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shrink-0 shadow-sm">
@@ -83,7 +77,6 @@ function fmt(n) {
       </div>
     </div>
 
-    <!-- Nav -->
     <nav class="flex-1 overflow-y-auto px-3 space-y-0.5">
       <router-link
         v-for="item in navItems"
@@ -99,7 +92,6 @@ function fmt(n) {
       </router-link>
     </nav>
 
-    <!-- This month stats -->
     <div class="mx-3 my-3 bg-slate-50 rounded-xl p-3.5 shrink-0">
       <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-3">This Month</p>
       <div class="space-y-2">
@@ -126,7 +118,6 @@ function fmt(n) {
       </div>
     </div>
 
-    <!-- Sign out -->
     <div class="px-3 pb-4 shrink-0">
       <button
         @click="authStore.logout"
@@ -137,7 +128,6 @@ function fmt(n) {
     </div>
   </aside>
 
-  <!-- Mobile bottom nav -->
   <nav class="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-100 flex h-16 shadow-t">
     <router-link
       v-for="item in navItems.slice(0, 5)"

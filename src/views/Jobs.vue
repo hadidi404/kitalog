@@ -102,7 +102,6 @@ function confirmDelete(id) {
         :message="filterStatus === 'All' ? 'No jobs recorded yet.' : 'No jobs with status \'' + filterStatus + '\''"
       />
 
-      <!-- Mobile: cards -->
       <div v-else class="md:hidden divide-y divide-slate-100">
         <div v-for="job in filteredJobs" :key="job.id" class="p-5">
           <div class="flex items-start justify-between gap-2 mb-2">
@@ -134,7 +133,6 @@ function confirmDelete(id) {
         </div>
       </div>
 
-      <!-- Desktop: table -->
       <div v-if="filteredJobs.length > 0" class="hidden md:block overflow-x-auto">
         <table class="w-full text-sm">
           <thead>

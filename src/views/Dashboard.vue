@@ -1,18 +1,18 @@
 <script setup>
 import { computed } from 'vue'
-import { Bar } from 'vue-chartjs'
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip } from 'chart.js'
+import { Bar, Doughnut } from 'vue-chartjs'
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend } from 'chart.js'
 import {
   ClipboardList, TrendingUp, Package, Wallet, Wrench,
   Clock, CheckCircle2, ChevronRight, ArrowUpRight, ArrowDownRight,
-  Calendar, Users, ShoppingBag, BadgeDollarSign
+  Calendar, Users, BadgeDollarSign
 } from 'lucide-vue-next'
 import { useShopStore } from '../stores/shop'
 import StatusBadge from '../components/StatusBadge.vue'
 import SparkLine from '../components/SparkLine.vue'
 import EmptyState from '../components/EmptyState.vue'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip)
+ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend)
 
 const store = useShopStore()
 
@@ -117,10 +117,10 @@ const todayKey = new Date().toISOString().split('T')[0]
 const todayStats = computed(() => {
   const today = store.jobs.filter(j => store.jobDate(j) === todayKey)
   return {
-    due:      today.filter(j => j.status !== 'Done').length,
-    waiting:  store.jobs.filter(j => j.status === 'In Progress').length,
-    pickups:  store.jobs.filter(j => j.status === 'Done').length,
-    earned:   today.reduce((s, j) => s + (j.total || 0), 0),
+    due:       today.filter(j => j.status !== 'Done').length,
+    waiting:   store.jobs.filter(j => j.status === 'In Progress').length,
+    completed: today.filter(j => j.status === 'Done').length,
+    earned:    today.reduce((s, j) => s + (j.total || 0), 0),
   }
 })
 
@@ -156,28 +156,68 @@ const weekChartOptions = {
 
 const recentJobs = computed(() => store.jobs.slice(0, 7))
 
+const REPAIR_TAGS = [
+  'Charging Port', 'Back Cover', 'Back Housing', 'Water Damage',
+  'Logic Board', 'Motherboard',
+  'Screen', 'Battery', 'Camera', 'Speaker',
+  'Microphone', 'Earpiece', 'Keyboard',
+  'Passcode', 'Password', 'Software', 'Virus',
+  'Charging', 'Housing', 'Button',
+]
+
+const DEVICE_COLORS = ['#3b82f6','#10b981','#f97316','#8b5cf6','#ec4899','#f59e0b','#64748b']
+
+const deviceStats = computed(() => {
+  const freq = {}
+  store.jobs.forEach(j => { if (j.device) freq[j.device] = (freq[j.device] || 0) + 1 })
+  const total = store.jobs.length || 1
+  return Object.entries(freq).sort((a, b) => b[1] - a[1])
+    .map(([name, count], i) => ({
+      name, count,
+      pct: Math.round(count / total * 100),
+      color: DEVICE_COLORS[i % DEVICE_COLORS.length],
+    }))
+})
+
+const doughnutData = computed(() => ({
+  labels: deviceStats.value.map(d => d.name),
+  datasets: [{
+    data: deviceStats.value.map(d => d.count),
+    backgroundColor: deviceStats.value.map(d => d.color),
+    borderWidth: 2, borderColor: '#fff',
+  }],
+}))
+
+const doughnutOptions = {
+  responsive: true, maintainAspectRatio: false,
+  plugins: { legend: { display: false } },
+  cutout: '68%',
+}
+
 const topRepairs = computed(() => {
   const freq = {}
-  store.jobs.forEach(j => { if (j.problem) freq[j.problem] = (freq[j.problem] || 0) + 1 })
+  store.jobs.forEach(j => {
+    if (!j.problem) return
+    const p = j.problem.toLowerCase()
+    const tag = REPAIR_TAGS.find(t => p.includes(t.toLowerCase()))
+    const key = tag ?? j.problem
+    freq[key] = (freq[key] || 0) + 1
+  })
   const total = store.jobs.length || 1
   return Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 5)
     .map(([name, count]) => ({ name, count, pct: Math.round(count / total * 100) }))
 })
 
-const topParts = computed(() => {
-  const freq = {}
-  store.jobs.forEach(j => {
-    ;(j.parts || []).forEach(p => { if (p.name) freq[p.name] = (freq[p.name] || 0) + 1 })
-  })
-  return Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 4)
-    .map(([name, used]) => ({ name, used }))
-})
 </script>
 
 <template>
   <div class="space-y-5">
 
-    <!-- Metric cards -->
+    <div>
+      <h2 class="text-lg font-bold text-slate-900">Dashboard</h2>
+      <p class="text-sm text-slate-500 mt-0.5">Welcome back — here's your repair business at a glance.</p>
+    </div>
+
     <div class="grid grid-cols-2 xl:grid-cols-4 gap-3">
 
       <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition-shadow">
@@ -185,21 +225,22 @@ const topParts = computed(() => {
           <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">
             <ClipboardList :size="18" class="text-blue-600" />
           </div>
-          <div class="w-16 h-8 opacity-70">
+          <div class="w-16 h-8">
             <SparkLine :data="spark.jobs" color="#3b82f6" />
           </div>
         </div>
-        <p class="text-xs font-medium text-slate-400 mb-1">Total Repairs</p>
+        <p class="text-xs font-medium text-slate-400 mb-1.5">Total Repairs</p>
         <p class="text-2xl font-bold text-slate-900 tracking-tight leading-none">{{ metrics.count }}</p>
-        <div class="flex items-center gap-1 mt-2">
-          <template v-if="metrics.cntPct !== null">
-            <component :is="metrics.cntPct >= 0 ? ArrowUpRight : ArrowDownRight" :size="12"
-              :class="metrics.cntPct >= 0 ? 'text-emerald-500' : 'text-red-500'" />
-            <span class="text-xs font-medium" :class="metrics.cntPct >= 0 ? 'text-emerald-500' : 'text-red-500'">
-              {{ Math.abs(metrics.cntPct) }}% from last month
-            </span>
-          </template>
-          <span v-else class="text-xs font-medium text-slate-400">+{{ metrics.mCount }} this month</span>
+        <div class="mt-3">
+          <span v-if="metrics.cntPct !== null"
+            class="inline-flex items-center gap-1 bg-blue-50 text-blue-600 rounded-full px-2 py-0.5 text-xs font-semibold">
+            <component :is="metrics.cntPct >= 0 ? ArrowUpRight : ArrowDownRight" :size="11" />
+            {{ metrics.cntPct >= 0 ? '+' : '' }}{{ metrics.cntPct }}% from last month
+          </span>
+          <span v-else class="inline-flex items-center gap-1 bg-blue-50 text-blue-600 rounded-full px-2 py-0.5 text-xs font-semibold">
+            <ArrowUpRight :size="11" />
+            +{{ metrics.mCount }} this month
+          </span>
         </div>
       </div>
 
@@ -208,21 +249,22 @@ const topParts = computed(() => {
           <div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center shrink-0">
             <TrendingUp :size="18" class="text-emerald-600" />
           </div>
-          <div class="w-16 h-8 opacity-70">
+          <div class="w-16 h-8">
             <SparkLine :data="spark.revenue" color="#10b981" />
           </div>
         </div>
-        <p class="text-xs font-medium text-slate-400 mb-1">Revenue</p>
+        <p class="text-xs font-medium text-slate-400 mb-1.5">Revenue</p>
         <p class="text-2xl font-bold text-slate-900 tracking-tight leading-none">{{ fmt(metrics.revenue) }}</p>
-        <div class="flex items-center gap-1 mt-2">
-          <template v-if="metrics.revPct !== null">
-            <component :is="metrics.revPct >= 0 ? ArrowUpRight : ArrowDownRight" :size="12"
-              :class="metrics.revPct >= 0 ? 'text-emerald-500' : 'text-red-500'" />
-            <span class="text-xs font-medium" :class="metrics.revPct >= 0 ? 'text-emerald-500' : 'text-red-500'">
-              {{ Math.abs(metrics.revPct) }}% from last month
-            </span>
-          </template>
-          <span v-else class="text-xs font-medium text-slate-400">{{ fmt(metrics.mRev) }} this month</span>
+        <div class="mt-3">
+          <span v-if="metrics.revPct !== null"
+            class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-600 rounded-full px-2 py-0.5 text-xs font-semibold">
+            <component :is="metrics.revPct >= 0 ? ArrowUpRight : ArrowDownRight" :size="11" />
+            {{ metrics.revPct >= 0 ? '+' : '' }}{{ metrics.revPct }}% from last month
+          </span>
+          <span v-else class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-600 rounded-full px-2 py-0.5 text-xs font-semibold">
+            <ArrowUpRight :size="11" />
+            {{ fmt(metrics.mRev) }} this month
+          </span>
         </div>
       </div>
 
@@ -231,21 +273,22 @@ const topParts = computed(() => {
           <div class="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center shrink-0">
             <Package :size="18" class="text-orange-500" />
           </div>
-          <div class="w-16 h-8 opacity-70">
+          <div class="w-16 h-8">
             <SparkLine :data="spark.expenses" color="#f97316" />
           </div>
         </div>
-        <p class="text-xs font-medium text-slate-400 mb-1">Expenses</p>
+        <p class="text-xs font-medium text-slate-400 mb-1.5">Expenses</p>
         <p class="text-2xl font-bold text-slate-900 tracking-tight leading-none">{{ fmt(metrics.expenses) }}</p>
-        <div class="flex items-center gap-1 mt-2">
-          <template v-if="metrics.expPct !== null">
-            <component :is="metrics.expPct > 0 ? ArrowUpRight : ArrowDownRight" :size="12"
-              :class="metrics.expPct > 0 ? 'text-red-500' : 'text-emerald-500'" />
-            <span class="text-xs font-medium" :class="metrics.expPct > 0 ? 'text-red-500' : 'text-emerald-500'">
-              {{ Math.abs(metrics.expPct) }}% from last month
-            </span>
-          </template>
-          <span v-else class="text-xs font-medium text-slate-400">{{ fmt(metrics.mExp) }} this month</span>
+        <div class="mt-3">
+          <span v-if="metrics.expPct !== null"
+            class="inline-flex items-center gap-1 bg-orange-50 text-orange-500 rounded-full px-2 py-0.5 text-xs font-semibold">
+            <component :is="metrics.expPct >= 0 ? ArrowUpRight : ArrowDownRight" :size="11" />
+            {{ metrics.expPct >= 0 ? '+' : '' }}{{ metrics.expPct }}% from last month
+          </span>
+          <span v-else class="inline-flex items-center gap-1 bg-orange-50 text-orange-500 rounded-full px-2 py-0.5 text-xs font-semibold">
+            <ArrowUpRight :size="11" />
+            {{ fmt(metrics.mExp) }} this month
+          </span>
         </div>
       </div>
 
@@ -254,16 +297,15 @@ const topParts = computed(() => {
           <div class="w-10 h-10 bg-violet-50 rounded-xl flex items-center justify-center shrink-0">
             <Wallet :size="18" class="text-violet-600" />
           </div>
-          <div class="w-16 h-8 opacity-70">
+          <div class="w-16 h-8">
             <SparkLine :data="spark.net" color="#8b5cf6" />
           </div>
         </div>
-        <p class="text-xs font-medium text-slate-400 mb-1">Net Profit</p>
+        <p class="text-xs font-medium text-slate-400 mb-1.5">Net Profit</p>
         <p class="text-2xl font-bold text-slate-900 tracking-tight leading-none">{{ fmt(metrics.net) }}</p>
-        <div class="flex items-center gap-1 mt-2">
-          <component :is="metrics.mNet >= 0 ? ArrowUpRight : ArrowDownRight" :size="12"
-            :class="metrics.mNet >= 0 ? 'text-emerald-500' : 'text-red-500'" />
-          <span class="text-xs font-medium" :class="metrics.mNet >= 0 ? 'text-emerald-500' : 'text-red-500'">
+        <div class="mt-3">
+          <span class="inline-flex items-center gap-1 bg-violet-50 text-violet-600 rounded-full px-2 py-0.5 text-xs font-semibold">
+            <component :is="metrics.mNet >= 0 ? ArrowUpRight : ArrowDownRight" :size="11" />
             {{ fmt(metrics.mNet) }} this month
           </span>
         </div>
@@ -271,10 +313,8 @@ const topParts = computed(() => {
 
     </div>
 
-    <!-- Main grid: left chart col + right activity col -->
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
-      <!-- Left: Revenue chart + Today at a Glance -->
       <div class="lg:col-span-3 flex flex-col gap-4">
 
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
@@ -291,7 +331,6 @@ const topParts = computed(() => {
           </div>
         </div>
 
-        <!-- Today at a Glance -->
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
           <p class="font-semibold text-slate-800 mb-4">Today at a Glance</p>
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -315,11 +354,11 @@ const topParts = computed(() => {
             </div>
             <div class="flex items-center gap-3 bg-slate-50 rounded-xl p-3">
               <div class="w-9 h-9 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0">
-                <ShoppingBag :size="15" class="text-emerald-600" />
+                <CheckCircle2 :size="15" class="text-emerald-600" />
               </div>
               <div>
-                <p class="text-lg font-bold text-slate-900 leading-none">{{ todayStats.pickups }}</p>
-                <p class="text-[10px] text-slate-400 mt-0.5 leading-tight">For pickup</p>
+                <p class="text-lg font-bold text-slate-900 leading-none">{{ todayStats.completed }}</p>
+                <p class="text-[10px] text-slate-400 mt-0.5 leading-tight">Completed today</p>
               </div>
             </div>
             <div class="flex items-center gap-3 bg-slate-50 rounded-xl p-3">
@@ -334,9 +373,43 @@ const topParts = computed(() => {
           </div>
         </div>
 
+        <div class="flex-1 flex flex-col lg:flex-row gap-4">
+
+          <div class="flex-1 bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+            <p class="font-semibold text-slate-800 mb-5">Top Repair Types</p>
+            <EmptyState v-if="!topRepairs.length" :icon="Wrench" message="No repair data yet." />
+            <div v-else class="space-y-4">
+              <div v-for="r in topRepairs" :key="r.name" class="flex items-center gap-3">
+                <p class="text-sm text-slate-700 w-32 truncate shrink-0">{{ r.name }}</p>
+                <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
+                  <div class="h-2 bg-blue-500 rounded-full transition-all duration-500" :style="`width:${r.pct}%`" />
+                </div>
+                <p class="text-xs font-semibold text-slate-500 w-8 text-right shrink-0 tabular-nums">{{ r.pct }}%</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex-1 bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex flex-col">
+            <p class="font-semibold text-slate-800 mb-4 shrink-0">Jobs By Device Type</p>
+            <EmptyState v-if="!deviceStats.length" :icon="Wrench" message="No data yet." />
+            <div v-else class="flex-1 min-h-0 flex items-center justify-center gap-4">
+              <div class="w-28 h-28 shrink-0">
+                <Doughnut :data="doughnutData" :options="doughnutOptions" />
+              </div>
+              <div class="flex flex-col gap-2">
+                <div v-for="d in deviceStats" :key="d.name" class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full shrink-0" :style="`background:${d.color}`" />
+                  <span class="text-xs text-slate-600 truncate">{{ d.name }}</span>
+                  <span class="text-xs font-semibold text-slate-700 tabular-nums ml-auto pl-2">{{ d.pct }}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
       </div>
 
-      <!-- Right: Jobs Status + Recent Activity -->
       <div class="lg:col-span-2 flex flex-col gap-4">
 
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
@@ -374,15 +447,15 @@ const topParts = computed(() => {
           </div>
         </div>
 
-        <div class="flex-1 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div class="px-5 py-4 border-b border-slate-50 flex items-center justify-between">
+        <div class="flex-1 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col">
+          <div class="px-5 py-4 border-b border-slate-50 flex items-center justify-between shrink-0">
             <p class="font-semibold text-slate-800 text-sm">Recent Activity</p>
             <router-link to="/jobs" class="inline-flex items-center gap-0.5 text-xs font-medium text-blue-600 hover:text-blue-700">
               View all <ChevronRight :size="13" />
             </router-link>
           </div>
           <EmptyState v-if="!recentJobs.length" :icon="ClipboardList" message="No jobs yet." />
-          <div v-else class="divide-y divide-slate-50">
+          <div v-else class="divide-y divide-slate-50 overflow-y-auto flex-1">
             <div
               v-for="job in recentJobs" :key="job.id"
               class="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors"
@@ -409,50 +482,6 @@ const topParts = computed(() => {
         </div>
 
       </div>
-    </div>
-
-    <!-- Bottom: Top Repair Types + Parts Used -->
-    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
-
-      <div class="lg:col-span-3 bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-        <p class="font-semibold text-slate-800 mb-5">Top Repair Types</p>
-        <EmptyState v-if="!topRepairs.length" :icon="Wrench" message="No repair data yet." />
-        <div v-else class="space-y-4">
-          <div v-for="r in topRepairs" :key="r.name" class="flex items-center gap-4">
-            <p class="text-sm text-slate-700 w-40 truncate shrink-0">{{ r.name }}</p>
-            <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
-              <div class="h-2 bg-blue-500 rounded-full transition-all duration-500" :style="`width:${r.pct}%`" />
-            </div>
-            <p class="text-xs text-slate-400 w-12 text-right shrink-0 tabular-nums">{{ r.count }} jobs</p>
-            <p class="text-xs font-semibold text-slate-500 w-8 text-right shrink-0 tabular-nums">{{ r.pct }}%</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-        <div class="flex items-center justify-between mb-5">
-          <p class="font-semibold text-slate-800">Parts Usage</p>
-          <router-link to="/parts" class="inline-flex items-center gap-0.5 text-xs font-medium text-blue-600 hover:text-blue-700">
-            View all <ChevronRight :size="13" />
-          </router-link>
-        </div>
-        <EmptyState v-if="!topParts.length" :icon="Package" message="No parts data yet." />
-        <div v-else class="space-y-3">
-          <div v-for="p in topParts" :key="p.name" class="flex items-center gap-3 py-2 border-b border-slate-50 last:border-0">
-            <div class="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center shrink-0">
-              <Package :size="13" class="text-slate-500" />
-            </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium text-slate-700 truncate">{{ p.name }}</p>
-              <p class="text-xs text-slate-400">Used in repairs</p>
-            </div>
-            <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full tabular-nums shrink-0">
-              {{ p.used }}×
-            </span>
-          </div>
-        </div>
-      </div>
-
     </div>
 
   </div>

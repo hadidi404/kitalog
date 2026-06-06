@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   LayoutDashboard, Briefcase,
-  Users, BarChart3, LogOut
+  Users, Boxes, BarChart3, LogOut
 } from 'lucide-vue-next'
 import { useAuthStore } from '../stores/auth'
 import { useShopStore } from '../stores/shop'
@@ -16,6 +16,7 @@ const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/jobs',      label: 'Jobs',      icon: Briefcase       },
   { path: '/customers', label: 'Customers', icon: Users           },
+  { path: '/inventory', label: 'Inventory', icon: Boxes           },
   { path: '/analytics', label: 'Analytics', icon: BarChart3       },
 ]
 
@@ -37,12 +38,16 @@ const thisMonth = computed(() => {
   const now  = new Date()
   const y    = now.getFullYear()
   const m    = now.getMonth()
-  const jobs = store.jobs.filter(j => {
-    const d = new Date(store.jobDate(j))
+  const inMonth = dateStr => {
+    const d = new Date(dateStr)
     return d.getFullYear() === y && d.getMonth() === m
-  })
-  const revenue  = jobs.reduce((s, j) => s + (j.total      || 0), 0)
-  const expenses = jobs.reduce((s, j) => s + (j.partsTotal  || 0), 0)
+  }
+  const jobs = store.jobs.filter(j => inMonth(store.jobDate(j)))
+  const stockSpend = store.purchases
+    .filter(p => inMonth(p.date))
+    .reduce((s, p) => s + (p.total || 0), 0)
+  const revenue  = jobs.reduce((s, j) => s + (j.total || 0), 0)
+  const expenses = jobs.reduce((s, j) => s + store.jobExpense(j), 0) + stockSpend
   const done = jobs.filter(j => j.status === 'Done').length
   return { revenue, expenses, net: revenue - expenses, done, count: jobs.length }
 })

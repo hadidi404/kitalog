@@ -80,15 +80,40 @@ const prevJobs = computed(() => {
   })
 })
 
+const filteredPurchases = computed(() => {
+  if (activePreset.value === 'custom') {
+    const from = customFrom.value ? new Date(customFrom.value) : null
+    const to   = customTo.value   ? new Date(customTo.value + 'T23:59:59') : new Date()
+    return store.purchases.filter(p => {
+      const d = new Date(p.date)
+      return (!from || d >= from) && d <= to
+    })
+  }
+  const start = getRangeStart(activePreset.value)
+  if (!start) return store.purchases
+  return store.purchases.filter(p => new Date(p.date) >= start)
+})
+
+const prevPurchases = computed(() => {
+  const start = getPrevRangeStart(activePreset.value)
+  const end   = getRangeStart(activePreset.value)
+  if (!start || !end) return []
+  return store.purchases.filter(p => {
+    const d = new Date(p.date)
+    return d >= start && d < end
+  })
+})
+
 function sumRevenue(jobs) { return jobs.reduce((s, j) => s + (j.total || 0), 0) }
-function sumExpenses(jobs) { return jobs.reduce((s, j) => s + (j.partsTotal || 0), 0) }
+function sumExpenses(jobs) { return jobs.reduce((s, j) => s + store.jobExpense(j), 0) }
+function sumPurchases(purchases) { return purchases.reduce((s, p) => s + (p.total || 0), 0) }
 function pctChange(curr, prev) { return prev === 0 ? null : Math.round((curr - prev) / prev * 100) }
 
 const summary = computed(() => {
   const rev  = sumRevenue(filteredJobs.value)
-  const exp  = sumExpenses(filteredJobs.value)
+  const exp  = sumExpenses(filteredJobs.value) + sumPurchases(filteredPurchases.value)
   const pRev = sumRevenue(prevJobs.value)
-  const pExp = sumExpenses(prevJobs.value)
+  const pExp = sumExpenses(prevJobs.value) + sumPurchases(prevPurchases.value)
   return {
     count:   filteredJobs.value.length,
     revenue: rev,
@@ -126,12 +151,25 @@ function dailySpark(reducer) {
     return reducer(store.jobs.filter(j => store.jobDate(j) === key))
   })
 }
-const spark = computed(() => ({
-  count:    dailySpark(j => j.length),
-  revenue:  dailySpark(j => sumRevenue(j)),
-  expenses: dailySpark(j => sumExpenses(j)),
-  net:      dailySpark(j => sumRevenue(j) - sumExpenses(j)),
-}))
+function dailyPurchaseSpark() {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - (6 - i))
+    const key = d.toISOString().split('T')[0]
+    return sumPurchases(store.purchases.filter(p => p.date === key))
+  })
+}
+const spark = computed(() => {
+  const revenue  = dailySpark(j => sumRevenue(j))
+  const jobExp   = dailySpark(j => sumExpenses(j))
+  const purchase = dailyPurchaseSpark()
+  const expenses = jobExp.map((v, i) => v + purchase[i])
+  return {
+    count:    dailySpark(j => j.length),
+    revenue,
+    expenses,
+    net:      revenue.map((v, i) => v - expenses[i]),
+  }
+})
 
 const trendChartData = computed(() => {
   const p = activePreset.value
@@ -182,8 +220,14 @@ const revExpChartData = computed(() => {
   filteredJobs.value.forEach(j => {
     const key = store.jobDate(j).slice(0, 7)
     if (!groups[key]) groups[key] = { rev: 0, exp: 0 }
-    groups[key].rev += j.total      || 0
-    groups[key].exp += j.partsTotal || 0
+    groups[key].rev += j.total || 0
+    groups[key].exp += store.jobExpense(j)
+  })
+  filteredPurchases.value.forEach(p => {
+    const key = (p.date || '').slice(0, 7)
+    if (key.length < 7) return
+    if (!groups[key]) groups[key] = { rev: 0, exp: 0 }
+    groups[key].exp += p.total || 0
   })
   const sorted = Object.entries(groups).sort(([a], [b]) => a.localeCompare(b))
   return {
@@ -270,9 +314,15 @@ const monthlyBreakdown = computed(() => {
     const key = store.jobDate(j).slice(0, 7)
     if (key.length < 7) return
     if (!groups[key]) groups[key] = { revenue: 0, expenses: 0, jobs: 0 }
-    groups[key].revenue  += j.total      || 0
-    groups[key].expenses += j.partsTotal || 0
+    groups[key].revenue  += j.total || 0
+    groups[key].expenses += store.jobExpense(j)
     groups[key].jobs++
+  })
+  filteredPurchases.value.forEach(p => {
+    const key = (p.date || '').slice(0, 7)
+    if (key.length < 7) return
+    if (!groups[key]) groups[key] = { revenue: 0, expenses: 0, jobs: 0 }
+    groups[key].expenses += p.total || 0
   })
   return Object.entries(groups)
     .sort(([a], [b]) => b.localeCompare(a))
@@ -454,7 +504,7 @@ const doughnutOptions = {
             </div>
             <div class="w-16 h-8"><SparkLine :data="spark.expenses" color="#f97316" /></div>
           </div>
-          <p class="text-xs font-medium text-slate-400 mb-1.5">Expenses (Parts)</p>
+          <p class="text-xs font-medium text-slate-400 mb-1.5">Expenses</p>
           <p class="text-2xl font-bold text-slate-900 tracking-tight leading-none">{{ fmtShort(summary.expenses) }}</p>
           <div class="mt-3">
             <span v-if="summary.expPct !== null"

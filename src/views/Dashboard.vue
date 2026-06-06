@@ -5,7 +5,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, T
 import {
   ClipboardList, TrendingUp, Package, Wallet, Wrench,
   Clock, CheckCircle2, ChevronRight, ArrowUpRight, ArrowDownRight,
-  Calendar, Users, BadgeDollarSign
+  Calendar, Users, BadgeDollarSign, AlertTriangle
 } from 'lucide-vue-next'
 import { useShopStore } from '../stores/shop'
 import StatusBadge from '../components/StatusBadge.vue'
@@ -65,12 +65,26 @@ const last7Labels = computed(() =>
   })
 )
 
-const spark = computed(() => ({
-  jobs:     dayData(j => j.length),
-  revenue:  dayData(j => j.reduce((s, x) => s + (x.total      || 0), 0)),
-  expenses: dayData(j => j.reduce((s, x) => s + (x.partsTotal || 0), 0)),
-  net:      dayData(j => j.reduce((s, x) => s + ((x.total || 0) - (x.partsTotal || 0)), 0)),
-}))
+function dayPurchaseData() {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - (6 - i))
+    const key = d.toISOString().split('T')[0]
+    return store.purchases.filter(p => p.date === key).reduce((s, p) => s + (p.total || 0), 0)
+  })
+}
+
+const spark = computed(() => {
+  const revenue  = dayData(j => j.reduce((s, x) => s + (x.total || 0), 0))
+  const jobExp   = dayData(j => j.reduce((s, x) => s + store.jobExpense(x), 0))
+  const purchase = dayPurchaseData()
+  const expenses = jobExp.map((v, i) => v + purchase[i])
+  return {
+    jobs:     dayData(j => j.length),
+    revenue,
+    expenses,
+    net:      revenue.map((v, i) => v - expenses[i]),
+  }
+})
 
 function monthJobs(offset = 0) {
   const d = new Date(); d.setMonth(d.getMonth() - offset)
@@ -80,23 +94,34 @@ function monthJobs(offset = 0) {
   })
 }
 
+function monthPurchaseTotal(offset = 0) {
+  const d = new Date(); d.setMonth(d.getMonth() - offset)
+  return store.purchases.filter(p => {
+    const pd = new Date(p.date + 'T00:00:00')
+    return pd.getFullYear() === d.getFullYear() && pd.getMonth() === d.getMonth()
+  }).reduce((s, p) => s + (p.total || 0), 0)
+}
+
 const metrics = computed(() => {
   const all = store.jobs
   const cur = monthJobs(0)
   const prv = monthJobs(1)
 
-  const total    = n => n.reduce((s, x) => s + (x.total      || 0), 0)
-  const expense  = n => n.reduce((s, x) => s + (x.partsTotal || 0), 0)
+  const total   = n => n.reduce((s, x) => s + (x.total || 0), 0)
+  const expense = n => n.reduce((s, x) => s + store.jobExpense(x), 0)
   const pct = (c, p) => p === 0 ? null : Math.round((c - p) / p * 100)
 
-  const curRev = total(cur);   const prvRev = total(prv)
-  const curExp = expense(cur); const prvExp = expense(prv)
+  const allExp = expense(all) + store.purchases.reduce((s, p) => s + (p.total || 0), 0)
+  const allRev = total(all)
+
+  const curRev = total(cur);                          const prvRev = total(prv)
+  const curExp = expense(cur) + monthPurchaseTotal(0); const prvExp = expense(prv) + monthPurchaseTotal(1)
 
   return {
     count:    all.length,
-    revenue:  all.reduce((s, x) => s + (x.total      || 0), 0),
-    expenses: all.reduce((s, x) => s + (x.partsTotal || 0), 0),
-    net:      all.reduce((s, x) => s + ((x.total || 0) - (x.partsTotal || 0)), 0),
+    revenue:  allRev,
+    expenses: allExp,
+    net:      allRev - allExp,
     mCount:   cur.length,
     revPct:   pct(curRev, prvRev),
     expPct:   pct(curExp, prvExp),
@@ -106,6 +131,12 @@ const metrics = computed(() => {
     mNet:     curRev - curExp,
   }
 })
+
+const lowStock = computed(() =>
+  store.inventory
+    .filter(i => (i.qty || 0) <= (i.threshold ?? 3))
+    .sort((a, b) => (a.qty || 0) - (b.qty || 0))
+)
 
 const statusCounts = computed(() => ({
   pending:    store.jobs.filter(j => j.status === 'Pending').length,
@@ -312,6 +343,27 @@ const topRepairs = computed(() => {
       </div>
 
     </div>
+
+    <router-link
+      v-if="lowStock.length"
+      to="/inventory"
+      class="flex items-center gap-3 bg-white rounded-2xl border border-amber-200 shadow-sm p-4 hover:shadow-md transition-shadow"
+    >
+      <div class="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center shrink-0">
+        <AlertTriangle :size="18" class="text-amber-500" />
+      </div>
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-semibold text-slate-800">
+          {{ lowStock.length }} item{{ lowStock.length !== 1 ? 's' : '' }} low on stock
+        </p>
+        <p class="text-xs text-slate-400 truncate">
+          {{ lowStock.map(i => `${i.name} (${i.qty || 0})`).join(' · ') }}
+        </p>
+      </div>
+      <span class="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 shrink-0">
+        Restock <ChevronRight :size="14" />
+      </span>
+    </router-link>
 
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
 

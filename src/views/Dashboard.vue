@@ -132,15 +132,6 @@ const metrics = computed(() => {
   }
 })
 
-const profitBreakdown = computed(() => {
-  const cur        = monthJobs(0)
-  const revenue    = cur.reduce((s, j) => s + (j.total || 0), 0)
-  const jobParts   = cur.reduce((s, j) => s + store.jobExpense(j), 0)
-  const stockSpend = monthPurchaseTotal(0)
-  const net        = revenue - jobParts - stockSpend
-  return { revenue, jobParts, stockSpend, net }
-})
-
 const lowStock = computed(() =>
   store.inventory
     .filter(i => (i.qty || 0) <= (i.threshold ?? 3))
@@ -256,37 +247,6 @@ const topRepairs = computed(() => {
     <div>
       <h2 class="text-lg font-bold text-slate-900">Dashboard</h2>
       <p class="text-sm text-slate-500 mt-0.5">Welcome back — here's your repair business at a glance.</p>
-    </div>
-
-    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-      <p class="font-semibold text-slate-800 mb-4">This Month's Profit</p>
-      <div class="space-y-3">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <div class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></div>
-            <span class="text-sm text-slate-600">Revenue</span>
-          </div>
-          <span class="text-sm font-semibold text-slate-800 tabular-nums">{{ fmt(profitBreakdown.revenue) }}</span>
-        </div>
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <div class="w-2 h-2 rounded-full bg-orange-400 shrink-0"></div>
-            <span class="text-sm text-slate-600">Job parts</span>
-          </div>
-          <span class="text-sm font-semibold text-slate-800 tabular-nums">− {{ fmt(profitBreakdown.jobParts) }}</span>
-        </div>
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <div class="w-2 h-2 rounded-full bg-violet-400 shrink-0"></div>
-            <span class="text-sm text-slate-600">Stock purchases</span>
-          </div>
-          <span class="text-sm font-semibold text-slate-800 tabular-nums">− {{ fmt(profitBreakdown.stockSpend) }}</span>
-        </div>
-        <div class="flex items-center justify-between pt-3 border-t border-slate-100">
-          <span class="text-sm font-bold text-slate-700">Net Profit</span>
-          <span class="text-sm font-bold tabular-nums" :class="profitBreakdown.net >= 0 ? 'text-emerald-600' : 'text-red-500'">{{ fmt(profitBreakdown.net) }}</span>
-        </div>
-      </div>
     </div>
 
     <div class="grid grid-cols-2 xl:grid-cols-4 gap-3">

@@ -78,16 +78,22 @@ function selectProblem(problem) {
 const activePart = ref(-1)
 
 const partSuggestions = computed(() => {
-  const q = form.value.parts[activePart.value]?.name?.trim().toLowerCase() || ''
+  const q         = form.value.parts[activePart.value]?.name?.trim().toLowerCase() || ''
+  const jobModel  = form.value.model.trim().toLowerCase()
   if (!q) return []
+  const matchesDevice = item => {
+    if (!item.model) return true
+    const m = item.model.toLowerCase()
+    return m.includes(jobModel) || jobModel.includes(m)
+  }
   const stock = store.inventory
-    .filter(i => i.name.toLowerCase().includes(q))
-    .map(i => ({ name: i.name, stockId: i.id, qty: i.qty, unitCost: i.unitCost }))
+    .filter(i => matchesDevice(i) && (i.name.toLowerCase().includes(q) || i.model?.toLowerCase().includes(q)))
+    .map(i => ({ name: i.name, model: i.model || '', stockId: i.id, qty: i.qty, unitCost: i.unitCost }))
   const stockNames = new Set(stock.map(s => s.name.toLowerCase()))
   const history = [...new Set(
     store.jobs.flatMap(j => j.parts || []).map(p => p.name?.trim()).filter(Boolean)
   )].filter(n => n.toLowerCase().includes(q) && !stockNames.has(n.toLowerCase()))
-    .map(n => ({ name: n, stockId: null }))
+    .map(n => ({ name: n, model: '', stockId: null }))
   return [...stock, ...history].slice(0, 7)
 })
 
@@ -392,7 +398,10 @@ async function submit() {
                             @mousedown.prevent="selectPart(s)"
                             class="flex items-center justify-between gap-2 px-3 py-1.5 text-xs cursor-pointer hover:bg-blue-50 hover:text-blue-700 transition-colors"
                           >
-                            <span class="truncate">{{ s.name }}</span>
+                            <div class="min-w-0">
+                              <p class="truncate">{{ s.name }}</p>
+                              <p v-if="s.model" class="text-[10px] text-slate-400 truncate">{{ s.model }}</p>
+                            </div>
                             <span v-if="s.stockId" class="inline-flex items-center gap-1 text-[10px] font-semibold shrink-0"
                               :class="s.qty > 0 ? 'text-emerald-600' : 'text-red-500'">
                               <Boxes :size="10" /> {{ s.qty }} in stock

@@ -1,15 +1,15 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { Bar, Line, Doughnut } from 'vue-chartjs'
+import { Bar, Line } from 'vue-chartjs'
 import {
   Chart as ChartJS,
   CategoryScale, LinearScale, BarElement,
   LineElement, PointElement, Filler,
-  ArcElement, Tooltip, Legend
+  Tooltip, Legend
 } from 'chart.js'
 import {
   TrendingUp, Package, ClipboardList, Wallet,
-  Trophy, Wrench, Users, ChevronRight, ArrowUpRight, ArrowDownRight, Download
+  Trophy, Wrench, Users, ChevronRight, ArrowUpRight, ArrowDownRight
 } from 'lucide-vue-next'
 import { useShopStore } from '../stores/shop'
 import SparkLine from '../components/SparkLine.vue'
@@ -18,7 +18,7 @@ import EmptyState from '../components/EmptyState.vue'
 ChartJS.register(
   CategoryScale, LinearScale, BarElement,
   LineElement, PointElement, Filler,
-  ArcElement, Tooltip, Legend
+  Tooltip, Legend
 )
 
 const store = useShopStore()
@@ -84,21 +84,21 @@ const filteredPurchases = computed(() => {
   if (activePreset.value === 'custom') {
     const from = customFrom.value ? new Date(customFrom.value) : null
     const to   = customTo.value   ? new Date(customTo.value + 'T23:59:59') : new Date()
-    return store.purchases.filter(p => {
+    return store.validPurchases.filter(p => {
       const d = new Date(p.date)
       return (!from || d >= from) && d <= to
     })
   }
   const start = getRangeStart(activePreset.value)
-  if (!start) return store.purchases
-  return store.purchases.filter(p => new Date(p.date) >= start)
+  if (!start) return store.validPurchases
+  return store.validPurchases.filter(p => new Date(p.date) >= start)
 })
 
 const prevPurchases = computed(() => {
   const start = getPrevRangeStart(activePreset.value)
   const end   = getRangeStart(activePreset.value)
   if (!start || !end) return []
-  return store.purchases.filter(p => {
+  return store.validPurchases.filter(p => {
     const d = new Date(p.date)
     return d >= start && d < end
   })
@@ -155,7 +155,7 @@ function dailyPurchaseSpark() {
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(); d.setDate(d.getDate() - (6 - i))
     const key = d.toISOString().split('T')[0]
-    return sumPurchases(store.purchases.filter(p => p.date === key))
+    return sumPurchases(store.validPurchases.filter(p => p.date === key))
   })
 }
 const spark = computed(() => {
@@ -248,32 +248,6 @@ const revExpChartData = computed(() => {
     ],
   }
 })
-
-const DEVICE_COLORS = [
-  '#3b82f6','#10b981','#f97316','#8b5cf6','#ec4899','#f59e0b','#64748b',
-]
-const deviceStats = computed(() => {
-  const freq = {}
-  filteredJobs.value.forEach(j => { if (j.device) freq[j.device] = (freq[j.device] || 0) + 1 })
-  const total  = filteredJobs.value.length || 1
-  const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1])
-  return sorted.map(([name, count], i) => ({
-    name,
-    count,
-    pct: Math.round(count / total * 100),
-    color: DEVICE_COLORS[i % DEVICE_COLORS.length],
-  }))
-})
-
-const doughnutData = computed(() => ({
-  labels: deviceStats.value.map(d => d.name),
-  datasets: [{
-    data: deviceStats.value.map(d => d.count),
-    backgroundColor: deviceStats.value.map(d => d.color),
-    borderWidth: 2,
-    borderColor: '#fff',
-  }],
-}))
 
 const topCustomers = computed(() => {
   const map = {}
@@ -403,11 +377,7 @@ const barOptions = {
   },
 }
 
-const doughnutOptions = {
-  responsive: true, maintainAspectRatio: false,
-  plugins: { legend: { display: false } },
-  cutout: '68%',
-}
+
 </script>
 
 <template>

@@ -43,7 +43,7 @@ const thisMonth = computed(() => {
     return d.getFullYear() === y && d.getMonth() === m
   }
   const jobs = store.jobs.filter(j => inMonth(store.jobDate(j)))
-  const stockSpend = store.purchases
+  const stockSpend = store.validPurchases
     .filter(p => inMonth(p.date))
     .reduce((s, p) => s + (p.total || 0), 0)
   const revenue  = jobs.reduce((s, j) => s + (j.total || 0), 0)

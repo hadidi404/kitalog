@@ -38,34 +38,45 @@ function fmt(n) {
 const today = () => new Date().toISOString().split('T')[0]
 const modal = ref(null)
 const saving = ref(false)
-const showNameSuggestions = ref(false)
+const showModelSuggestions = ref(false)
+const showPartSuggestions  = ref(false)
 
-const nameSuggestions = computed(() => {
+const modelSuggestions = computed(() => {
+  if (!modal.value || modal.value.mode === 'restock') return []
+  const q = modal.value.model?.trim().toLowerCase() || ''
+  if (!q) return []
+  return [...new Set(store.jobs.map(j => j.model?.trim()).filter(Boolean))]
+    .filter(n => n.toLowerCase().includes(q)).slice(0, 6)
+})
+
+const partSuggestions = computed(() => {
   if (!modal.value || modal.value.mode === 'restock') return []
   const q = modal.value.name?.trim().toLowerCase() || ''
   if (!q) return []
   return [...new Set(
-    store.purchases.map(p => p.name?.trim()).filter(Boolean)
+    store.jobs.flatMap(j => j.parts || []).map(p => p.name?.trim()).filter(Boolean)
   )].filter(n => n.toLowerCase().includes(q)).slice(0, 6)
 })
 
-function selectName(name) {
-  modal.value.name = name
-  showNameSuggestions.value = false
-}
+function selectModel(v) { modal.value.model = v; showModelSuggestions.value = false }
+function selectPart(v)  { modal.value.name = v;  showPartSuggestions.value = false }
 
 function openAdd() {
-  modal.value = { mode: 'add', name: '', qty: '', unitCost: '', supplier: '', threshold: '3', date: today() }
+  modal.value = { mode: 'add', model: '', name: '', qty: '', unitCost: '', supplier: '', threshold: '3', date: today() }
 }
 function openRestock(item) {
-  modal.value = { mode: 'restock', id: item.id, name: item.name, qty: '', unitCost: String(item.unitCost ?? ''), date: today() }
+  modal.value = { mode: 'restock', id: item.id, model: item.model || '', name: item.name, qty: '', unitCost: String(item.unitCost ?? ''), date: today() }
 }
 function openEdit(item) {
   modal.value = {
-    mode: 'edit', id: item.id, name: item.name,
+    mode: 'edit', id: item.id, model: item.model || '', name: item.name,
     qty: String(item.qty ?? 0), unitCost: String(item.unitCost ?? ''),
     supplier: item.supplier || '', threshold: String(threshold(item)),
   }
+}
+
+function label(item) {
+  return item.model ? `${item.model} — ${item.name}` : item.name
 }
 function closeModal() { modal.value = null }
 
@@ -82,6 +93,7 @@ async function saveModal() {
   try {
     if (m.mode === 'add') {
       await store.addInventory({
+        model:     m.model.trim(),
         name:      m.name.trim(),
         qty:       Number(m.qty) || 0,
         unitCost:  Number(m.unitCost) || 0,
@@ -99,6 +111,7 @@ async function saveModal() {
       showToast('Stock updated.')
     } else {
       await store.updateInventory(m.id, {
+        model:     m.model.trim(),
         name:      m.name.trim(),
         qty:       Number(m.qty) || 0,
         unitCost:  Number(m.unitCost) || 0,
@@ -182,7 +195,7 @@ function confirmDelete(item) {
         <div v-for="item in items" :key="item.id" class="p-4">
           <div class="flex items-start justify-between gap-2 mb-2">
             <div class="min-w-0">
-              <p class="font-semibold text-slate-800 truncate">{{ item.name }}</p>
+              <p class="font-semibold text-slate-800 truncate">{{ label(item) }}</p>
               <p v-if="item.supplier" class="text-xs text-slate-400 mt-0.5 truncate">{{ item.supplier }}</p>
             </div>
             <span
@@ -222,6 +235,7 @@ function confirmDelete(item) {
             <tr v-for="item in items" :key="item.id" class="hover:bg-slate-50/60 transition-colors">
               <td class="px-5 py-3.5">
                 <p class="font-semibold text-slate-800">{{ item.name }}</p>
+                <p v-if="item.model" class="text-xs text-slate-400 mt-0.5">{{ item.model }}</p>
               </td>
               <td class="px-5 py-3.5 text-slate-500">{{ item.supplier || '—' }}</td>
               <td class="px-5 py-3.5 text-center">
@@ -278,21 +292,39 @@ function confirmDelete(item) {
             </div>
 
             <div v-if="modal.mode !== 'restock'">
-              <label class="text-xs font-semibold text-slate-600 mb-1 block">Part Name</label>
+              <label class="text-xs font-semibold text-slate-600 mb-1 block">Device / Model</label>
               <div class="relative">
                 <input
-                  v-model="modal.name" type="text" placeholder="e.g. Samsung A54 LCD" autocomplete="off"
-                  @focus="showNameSuggestions = true"
-                  @blur="showNameSuggestions = false"
+                  v-model="modal.model" type="text" placeholder="e.g. Apple iPhone 13" autocomplete="off"
+                  @focus="showModelSuggestions = true"
+                  @blur="showModelSuggestions = false"
                   class="w-full border border-slate-200 rounded-lg px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <ul v-if="showNameSuggestions && nameSuggestions.length"
+                <ul v-if="showModelSuggestions && modelSuggestions.length"
                     class="absolute z-50 w-full bg-white border border-slate-200 rounded-lg shadow-lg mt-1 max-h-44 overflow-y-auto">
-                  <li
-                    v-for="name in nameSuggestions" :key="name"
-                    @mousedown.prevent="selectName(name)"
+                  <li v-for="s in modelSuggestions" :key="s"
+                    @mousedown.prevent="selectModel(s)"
                     class="px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 hover:text-blue-700 transition-colors"
-                  >{{ name }}</li>
+                  >{{ s }}</li>
+                </ul>
+              </div>
+            </div>
+
+            <div v-if="modal.mode !== 'restock'">
+              <label class="text-xs font-semibold text-slate-600 mb-1 block">Part</label>
+              <div class="relative">
+                <input
+                  v-model="modal.name" type="text" placeholder="e.g. Battery" autocomplete="off"
+                  @focus="showPartSuggestions = true"
+                  @blur="showPartSuggestions = false"
+                  class="w-full border border-slate-200 rounded-lg px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <ul v-if="showPartSuggestions && partSuggestions.length"
+                    class="absolute z-50 w-full bg-white border border-slate-200 rounded-lg shadow-lg mt-1 max-h-44 overflow-y-auto">
+                  <li v-for="s in partSuggestions" :key="s"
+                    @mousedown.prevent="selectPart(s)"
+                    class="px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                  >{{ s }}</li>
                 </ul>
               </div>
             </div>

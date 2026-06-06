@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import {
   collection, onSnapshot, addDoc, deleteDoc,
-  updateDoc, doc, query, orderBy,
+  updateDoc, doc, query, orderBy, where, getDocs,
 } from 'firebase/firestore'
 import { db } from '../firebase'
 
@@ -35,6 +35,12 @@ export const useShopStore = defineStore('shop', () => {
     query(collection(db, 'purchases'), orderBy('date', 'desc')),
     snapshot => { purchases.value = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) },
     err => console.error('Purchases error:', err),
+  )
+
+  const validPurchases = computed(() =>
+    purchases.value.filter(p =>
+      !p.itemId || inventory.value.some(i => i.id === p.itemId)
+    )
   )
 
   function stockMap(parts) {
@@ -92,9 +98,10 @@ export const useShopStore = defineStore('shop', () => {
     return job.partsCost != null ? job.partsCost : (job.partsTotal || 0)
   }
 
-  async function logPurchase({ itemId, name, qty, unitCost, date }) {
+  async function logPurchase({ itemId, model, name, qty, unitCost, date }) {
     await addDoc(collection(db, 'purchases'), {
       itemId:    itemId || null,
+      model:     model || '',
       name,
       qty,
       unitCost,
@@ -104,8 +111,9 @@ export const useShopStore = defineStore('shop', () => {
     })
   }
 
-  async function addInventory({ name, qty, unitCost, supplier, threshold, date }) {
+  async function addInventory({ model, name, qty, unitCost, supplier, threshold, date }) {
     const ref = await addDoc(collection(db, 'inventory'), {
+      model:     model || '',
       name,
       qty,
       unitCost,
@@ -114,7 +122,7 @@ export const useShopStore = defineStore('shop', () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     })
-    if (qty > 0) await logPurchase({ itemId: ref.id, name, qty, unitCost, date })
+    if (qty > 0) await logPurchase({ itemId: ref.id, model, name, qty, unitCost, date })
     return ref.id
   }
 
@@ -127,7 +135,7 @@ export const useShopStore = defineStore('shop', () => {
       unitCost:  cost,
       updatedAt: new Date().toISOString(),
     })
-    await logPurchase({ itemId: id, name: item.name, qty, unitCost: cost, date })
+    await logPurchase({ itemId: id, model: item.model, name: item.name, qty, unitCost: cost, date })
   }
 
   async function updateInventory(id, patch) {
@@ -139,10 +147,12 @@ export const useShopStore = defineStore('shop', () => {
 
   async function deleteInventory(id) {
     await deleteDoc(doc(db, 'inventory', id))
+    const snap = await getDocs(query(collection(db, 'purchases'), where('itemId', '==', id)))
+    await Promise.all(snap.docs.map(d => deleteDoc(d.ref)))
   }
 
   return {
-    jobs, inventory, purchases, loading,
+    jobs, inventory, purchases, validPurchases, loading,
     addJob, deleteJob, updateJob, jobDate, jobExpense,
     addInventory, restockInventory, updateInventory, deleteInventory,
   }
